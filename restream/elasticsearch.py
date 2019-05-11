@@ -17,6 +17,7 @@ from ..exceptions import ElasticsearchConnectionError
 def init_elasticsearch(uri):
     # init ElasticSearch
     es_conn = elasticsearch.Elasticsearch(uri)
+    print (es_conn)
     try:
         es_conn.info()
     except elasticsearch.ConnectionError:
