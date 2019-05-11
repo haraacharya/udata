@@ -14,12 +14,59 @@ import threading
 import math
 import webbrowser
 
+from queue import Queue
+
+import pandas as pd
+import numpy as np
+
+from .restream.elasticsearch import init_elasticsearch
+
 
 
 from helpers import parse_arguments
 
 from .helpers import load_detector
 from .exceptions import UdataError
+
+
+
+MAX_BATCH_SIZE = 1000
+
+def restream_dataframe(
+        dataframe, detector, sensors=None, timefield=None,
+        speed=10, es_uri=None, kibana_uri=None, index_name='',
+        entry_type='', bokeh_port=5001, cols=3):
+    """
+        Restream from an input pandas dataframe to an existing Elasticsearch instance and/or to a
+        built-in Bokeh server.
+        Generates respective Kibana & Bokeh dashboard apps to visualize the
+        stream in the browser
+    """
+    if es_uri:
+        es_conn = init_elasticsearch(es_uri)
+        # Generate dashboard with selected fields and scores
+        print("generate a kibana dashboard!")
+    else:
+        es_conn = None
+
+    # Queue to communicate between restreamer and dashboard threads
+    update_queue = Queue()
+    print("generate a bokeh dashboard!")
+
+    restream_thread = threading.Thread(
+        target=threaded_restream_dataframe,
+        args=(dataframe, sensors, detector, timefield, es_conn,
+              index_name, entry_type, bokeh_port, update_queue)
+    )
+    restream_thread.start()
+
+def threaded_restream_dataframe(dataframe, sensors, detector, timefield,
+                                es_conn, index_name, entry_type, bokeh_port,
+                                update_queue, interval=3, sleep_interval=1):
+    """ Restream dataframe to bokeh and/or Elasticsearch """
+    # Split data into batches
+    batches = np.array_split(dataframe, math.ceil(dataframe.shape[0]/MAX_BATCH_SIZE))
+    
 
 # Main function
 def main():
@@ -30,7 +77,27 @@ def main():
         #Generate a index name based on input
         index_name = args.input.split('/')[-1].split('.')[0].split('_')[0]
         if not index_name:
-            index_name = 'Uuata'
+            index_name = 'Udata'
+
+        print('loading data...')
+        """
+        This will be the core of Udata
+        Detect inputdata, 
+        if type csv:  load into pandas dataframe
+        if type text: find out how to load the file (To be decided)
+        """
+        dataframe = pd.read_csv(args.input, sep=',')
+        print('Loaded into dataframe.\n')
+        
+        restream_dataframe(dataframe, detector=detector, 
+            speed=int(float(args.speed)),
+            es_uri=args.es and args.es_uri, kibana_uri=args.kibana_uri, 
+            index_name=index_name, entry_type=args.entry_type, bokeh_port=int(args.bokeh_port),
+            cols=int(args.cols)
+        )
+
+
+
     
     except UdataError as exc:
         print(repr(exc))
@@ -41,3 +108,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    
