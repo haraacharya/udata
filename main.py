@@ -19,7 +19,7 @@ from queue import Queue
 import pandas as pd
 import numpy as np
 
-from .restream.elasticsearch import init_elasticsearch
+from restream.elasticsearch import init_elasticsearch
 
 
 
@@ -29,8 +29,9 @@ from .helpers import load_detector
 from .exceptions import UdataError
 
 
-
 MAX_BATCH_SIZE = 1000
+
+sys.path.append("..")
 
 def restream_dataframe(
         dataframe, detector, sensors=None, timefield=None,
@@ -97,8 +98,6 @@ def main():
         )
 
 
-
-    
     except UdataError as exc:
         print(repr(exc))
         sys.exit(exc.code)
