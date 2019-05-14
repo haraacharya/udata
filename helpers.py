@@ -1,6 +1,7 @@
 """ Helper functions """
 import argparse
 
+from exceptions import ModuleLoadError, DetectorNotFoundError
 
 
 """ Parse commandline arguments """
@@ -53,3 +54,12 @@ def load_detector(name, modules):
             return detector
 
     raise DetectorNotFoundError("Can't find detector: %s" % name)
+
+
+def init_detector_models(sensors, training_set, detector):
+    """ Initialize anomaly detector models """
+    models = {}
+    for sensor in sensors:
+        models[sensor] = detector()
+        models[sensor].fit(training_set[sensor])
+    return models

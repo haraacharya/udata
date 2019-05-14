@@ -25,13 +25,13 @@ from restream.elasticsearch import init_elasticsearch
 
 from helpers import parse_arguments
 
-from .helpers import load_detector
-from .exceptions import UdataError
+from helpers import load_detector
+from exceptions import UdataError
 
 
 MAX_BATCH_SIZE = 1000
 
-sys.path.append("..")
+# sys.path.append("/home/cssdesk/Desktop/Udata/")
 
 def restream_dataframe(
         dataframe, detector, sensors=None, timefield=None,
@@ -67,6 +67,10 @@ def threaded_restream_dataframe(dataframe, sensors, detector, timefield,
     """ Restream dataframe to bokeh and/or Elasticsearch """
     # Split data into batches
     batches = np.array_split(dataframe, math.ceil(dataframe.shape[0]/MAX_BATCH_SIZE))
+
+    # Initialize anomaly detector models, train using first batch
+    models = init_detector_models(sensors, batches[0], detector)
+    
     
 
 # Main function

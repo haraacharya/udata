@@ -33,6 +33,11 @@ class ModuleLoadError(UdataError):
     msg = "Error loading module"
     code = 1
 
+class DetectorNotFoundError(UdataError):
+    msg = "Anomaly detector not found"
+    code = 2
+
 class ElasticsearchConnectionError(UdataError):
     msg = "Cannot connect to Elasticsearch"
-    code = 2
+    code = 3
+
