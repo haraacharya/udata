@@ -2,6 +2,7 @@
 import argparse
 
 from exceptions import ModuleLoadError, DetectorNotFoundError
+from anomaly_detectors import AnomalyMixin
 
 
 """ Parse commandline arguments """

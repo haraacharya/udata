@@ -25,7 +25,7 @@ from restream.elasticsearch import init_elasticsearch
 
 from helpers import parse_arguments
 
-from helpers import load_detector
+from helpers import load_detector, init_detector_models
 from exceptions import UdataError
 
 
@@ -70,7 +70,7 @@ def threaded_restream_dataframe(dataframe, sensors, detector, timefield,
 
     # Initialize anomaly detector models, train using first batch
     models = init_detector_models(sensors, batches[0], detector)
-    
+
     
 
 # Main function
