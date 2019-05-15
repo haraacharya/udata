@@ -2,6 +2,10 @@ import abc
 import pandas as pd
 import numpy as np
 
+from update_formulae import (
+    rolling_window_update,
+    decision_rule
+)
 
 from scipy.stats import norm
 from sklearn.base import BaseEstimator
@@ -60,9 +64,11 @@ class Gaussian1D(BaseEstimator, AnomalyMixin):
     
     def score_anomaly(self, x):
         x = pd.Series(x)
-        scaled_x = np.abs(x - self.mu_)/(1.0*self.std__)
+        scaled_x = np.abs(x - self.mu_)/(1.0*self.std_)
         return norm.cdf(scaled_x)
-        
+    def flag_anomaly(self, x):
+        return decision_rule(self.score_anomaly(x), self.threshold)
+
 
 
 
