@@ -41,3 +41,7 @@ class ElasticsearchConnectionError(UdataError):
     msg = "Cannot connect to Elasticsearch"
     code = 3
 
+class SensorsNotFoundError(UdataError):
+    msg = "Selected sensors not found in data"
+    code = 4
+

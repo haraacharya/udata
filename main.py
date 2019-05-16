@@ -25,7 +25,7 @@ from restream.elasticsearch import init_elasticsearch
 
 from helpers import parse_arguments
 
-from helpers import load_detector, init_detector_models
+from helpers import load_detector, init_detector_models, select_sensors, normalize_timefield
 from exceptions import UdataError
 
 
@@ -43,6 +43,14 @@ def restream_dataframe(
         Generates respective Kibana & Bokeh dashboard apps to visualize the
         stream in the browser
     """
+    dataframe, timefield, available_sensors = normalize_timefield(
+        dataframe, timefield, speed
+    )
+
+    dataframe, sensors = select_sensors(
+        dataframe, sensors, available_sensors, timefield
+    )
+
     if es_uri:
         es_conn = init_elasticsearch(es_uri)
         # Generate dashboard with selected fields and scores
@@ -65,9 +73,11 @@ def threaded_restream_dataframe(dataframe, sensors, detector, timefield,
                                 es_conn, index_name, entry_type, bokeh_port,
                                 update_queue, interval=3, sleep_interval=1):
     """ Restream dataframe to bokeh and/or Elasticsearch """
+    print ("Inside threaded_restream_dataframe")
+
     # Split data into batches
     batches = np.array_split(dataframe, math.ceil(dataframe.shape[0]/MAX_BATCH_SIZE))
-
+    
     # Initialize anomaly detector models, train using first batch
     models = init_detector_models(sensors, batches[0], detector)
 

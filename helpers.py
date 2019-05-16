@@ -1,7 +1,12 @@
 """ Helper functions """
 import argparse
+import time
+import dateparser
 
-from exceptions import ModuleLoadError, DetectorNotFoundError
+import numpy as np
+import pandas as pd
+
+from exceptions import ModuleLoadError, DetectorNotFoundError, SensorsNotFoundError
 from anomaly_detectors import AnomalyMixin
 
 
@@ -61,6 +66,77 @@ def init_detector_models(sensors, training_set, detector):
     """ Initialize anomaly detector models """
     models = {}
     for sensor in sensors:
+        print ("#########################")
+        print (sensor)
         models[sensor] = detector()
         models[sensor].fit(training_set[sensor])
     return models
+
+def normalize_timefield(dataframe, timefield, speed=5):
+    available_sensor_names = set(dataframe.columns)
+
+       
+    # If no timefield can be detected treat input as timeseries
+    if not timefield:
+        # Add time dimension with fixed intervals starting from now
+        timefield = 'time'
+        unix = True
+        start = int(time.time())
+        dataframe[timefield] = pd.Series(
+            range(start, start+dataframe.shape[0]),
+            index=dataframe.index
+        )
+    else:
+        available_sensor_names.remove(timefield)
+
+    if not unix:
+        dataframe['time'] = pd.to_datetime(
+            dataframe[timefield],
+            infer_datetime_format=True
+        ).values.astype(np.int64) // 10 ** 9
+        timefield = 'time'
+        unix = True
+
+    min_time = dataframe[timefield][0]
+    max_time = dataframe[timefield][dataframe[timefield].size-1]
+
+    print('data found from {} to {}'\
+            .format(dateparser.parse(str(min_time)),
+                    dateparser.parse(str(max_time))))
+
+    if unix:
+        print('Converting to milliseconds ...')
+        dataframe[timefield] = np.floor(dataframe[timefield]*1000).astype('int')
+        print('Done')
+
+    now = np.int(np.round(time.time()*1000))
+    first_timestamp = dataframe[timefield][0]
+    time_offset = now - first_timestamp
+    print('Adding time offset of %.2f seconds' % float(time_offset/1000.0))
+    print('Setting speed to %sx' % ('%f' % speed).rstrip('0').rstrip('.'))
+    dataframe[timefield] = (now + (dataframe[timefield] -
+                                   first_timestamp)/speed).astype(int)
+    print('Done')
+
+    return dataframe, timefield, available_sensor_names
+
+def select_sensors(dataframe, sensors, available_sensor_names, timefield):
+    # Get selected sensors from args
+    if sensors:
+        sensor_names = set(sensors)
+    else: # Get all sensors if none selected
+        sensor_names = set([s for s in available_sensor_names if not s.startswith('Unnamed:')])
+
+    # Check that all sensor names given in config file are in data file
+    if not sensor_names.issubset(available_sensor_names):
+        raise SensorsNotFoundError(sensor_names)
+
+    for sensor in sensor_names.copy():
+        if dataframe[sensor].dtype == np.dtype('O'):
+            sensor_names.remove(sensor)
+
+    ### Copy selected sensors to new dataframe
+    df_copy = dataframe[[timefield] + list(sensor_names)].copy()
+
+    return df_copy, sensor_names
+

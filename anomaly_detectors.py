@@ -17,7 +17,7 @@ class AnomalyMixin(object):
     This is a Mixin class for all Anomaly detectors compatible to BaseEstimator from scikit-learn
     """
     _estimator_type = "anomaly"
-    def fit_score(self, x):
+    def fit_score(self, X):
         """
         Fits the model on X and scores each datapoint in X.
 
@@ -55,12 +55,12 @@ class Gaussian1D(BaseEstimator, AnomalyMixin):
 
     def fit(self, x):
         x = pd.Series(x)
-        self.__setattr__('mu_', np.mean(x))
-        self.__setattr__('std_', np.std(x))
-        self.__setattr__('ess_', len(x))
+        # self.__setattr__('mu_', np.mean(x))
+        # self.__setattr__('std_', np.std(x, ddof=1))
+        # self.__setattr__('ess_', len(x))
 
-    def update(self, x): # allows mini-batches
-        pass
+    def update(self, x):  # allows mini-batch
+       pass
     
     def score_anomaly(self, x):
         x = pd.Series(x)
