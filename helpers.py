@@ -6,7 +6,7 @@ import dateparser
 import numpy as np
 import pandas as pd
 
-from exceptions import ModuleLoadError, DetectorNotFoundError, SensorsNotFoundError
+from exceptions import ModuleLoadError, DetectorNotFoundError, SensorsNotFoundError, TimefieldNotFoundError
 from anomaly_detectors import AnomalyMixin
 
 
@@ -72,51 +72,93 @@ def init_detector_models(sensors, training_set, detector):
         models[sensor].fit(training_set[sensor])
     return models
 
+def detect_time(dataframe):
+    # Trying to detect time dimension in a dataframe
+    columns = set(dataframe.columns)
+    timefield = unix = None
+    for tfname in ['time', 'datetime', 'data_time', 'data-time', 'date', 'time_stamp', 'time-stamp', 'timestamp']:
+        if tfname in columns:
+            prev = current = None
+            # Assuming unix timestamp
+            unix = True
+            for i in dataframe[tfname][:10]:
+                try:
+                    current = dateparser.parse(str(i))
+                    if not current or (prev and prev > current):
+                        tfname = ''
+                        break
+                    if unix and not (isinstance(i, float) or isinstance(i, int)):
+                        unix = False
+                except TypeError:
+                    tfname = ''
+                    break
+            prev = current
+            if tfname:
+                timefield = tfname
+                if isinstance(i, float) or isinstance(i, int):
+                    unix = True
+                break
+    
+    return timefield, unix
+
+
+
 def normalize_timefield(dataframe, timefield, speed=5):
+    print ("===========================", timefield)
     available_sensor_names = set(dataframe.columns)
+    
+    # Get timefield from args
+    if timefield and timefield not in available_sensor_names:
+        raise TimefieldNotFoundError(timefield)
 
-       
-    # If no timefield can be detected treat input as timeseries
+    # Try to autodetect timefield if not provided as a part of flow/user
     if not timefield:
-        # Add time dimension with fixed intervals starting from now
-        timefield = 'time'
-        unix = True
-        start = int(time.time())
-        dataframe[timefield] = pd.Series(
-            range(start, start+dataframe.shape[0]),
-            index=dataframe.index
-        )
-    else:
-        available_sensor_names.remove(timefield)
+        timefield, unix = detect_time(dataframe)
+        
 
-    if not unix:
-        dataframe['time'] = pd.to_datetime(
-            dataframe[timefield],
-            infer_datetime_format=True
-        ).values.astype(np.int64) // 10 ** 9
-        timefield = 'time'
-        unix = True
+        # If no timefield can be detected treat input as timeseries
+        if not timefield:
+            print ("*****No timefield detected")
+            # Add time dimension with fixed intervals starting from now
+            timefield = 'time'
+            unix = True
+            start = int(time.time())
+            dataframe[timefield] = pd.Series(
+                range(start, start+dataframe.shape[0]),
+                index=dataframe.index
+            )
+        else:
+            print ("*********Will remove timefield******")
+            available_sensor_names.remove(timefield)
+        
+        min_time = dataframe[timefield][0]
+        max_time = dataframe[timefield][dataframe[timefield].size-1]
 
-    min_time = dataframe[timefield][0]
-    max_time = dataframe[timefield][dataframe[timefield].size-1]
+        if not unix:
+                dataframe['time'] = pd.to_datetime(
+                    dataframe[timefield],
+                    infer_datetime_format=True
+                ).values.astype(np.int64) // 10 ** 9
+                timefield = 'time'
+                unix = True
 
-    print('data found from {} to {}'\
-            .format(dateparser.parse(str(min_time)),
-                    dateparser.parse(str(max_time))))
+        print('data found from {} to {}'\
+                .format(dateparser.parse(str(min_time)),
+                        dateparser.parse(str(max_time))))
 
-    if unix:
-        print('Converting to milliseconds ...')
-        dataframe[timefield] = np.floor(dataframe[timefield]*1000).astype('int')
+        if unix:
+            print('Converting to milliseconds ...')
+            dataframe[timefield] = np.floor(dataframe[timefield]*1000).astype('int')
+            print('Done')
+
+        now = np.int(np.round(time.time()*1000))
+        first_timestamp = dataframe[timefield][0]
+        time_offset = now - first_timestamp
+        print('Adding time offset of %.2f seconds' % float(time_offset/1000.0))
+        print('Setting speed to %sx' % ('%f' % speed).rstrip('0').rstrip('.'))
+        dataframe[timefield] = (now + (dataframe[timefield] -
+                                    first_timestamp)/speed).astype(int)
         print('Done')
-
-    now = np.int(np.round(time.time()*1000))
-    first_timestamp = dataframe[timefield][0]
-    time_offset = now - first_timestamp
-    print('Adding time offset of %.2f seconds' % float(time_offset/1000.0))
-    print('Setting speed to %sx' % ('%f' % speed).rstrip('0').rstrip('.'))
-    dataframe[timefield] = (now + (dataframe[timefield] -
-                                   first_timestamp)/speed).astype(int)
-    print('Done')
 
     return dataframe, timefield, available_sensor_names
 

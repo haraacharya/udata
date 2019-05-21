@@ -29,7 +29,7 @@ from helpers import load_detector, init_detector_models, select_sensors, normali
 from exceptions import UdataError
 
 
-MAX_BATCH_SIZE = 1000
+MAX_BATCH_SIZE = 10
 
 # sys.path.append("/home/cssdesk/Desktop/Udata/")
 
@@ -43,13 +43,23 @@ def restream_dataframe(
         Generates respective Kibana & Bokeh dashboard apps to visualize the
         stream in the browser
     """
+    print ("printing default dataframe")
+    print (dataframe)
+
     dataframe, timefield, available_sensors = normalize_timefield(
         dataframe, timefield, speed
     )
+    
+    print ("printing dataframe after normalize_timefield")
+    print (dataframe)
+    sys.exit()
 
     dataframe, sensors = select_sensors(
         dataframe, sensors, available_sensors, timefield
     )
+
+    print ("printing dataframe after select_sensors")
+    print (dataframe)
 
     if es_uri:
         es_conn = init_elasticsearch(es_uri)
@@ -76,10 +86,23 @@ def threaded_restream_dataframe(dataframe, sensors, detector, timefield,
     print ("Inside threaded_restream_dataframe")
 
     # Split data into batches
+    print ("printing default dataframe inside  threaded_restream_dataframe")
+    print (dataframe)
     batches = np.array_split(dataframe, math.ceil(dataframe.shape[0]/MAX_BATCH_SIZE))
-    
+    print ("*******************printing batch**********************")
+    print (batches[0])
     # Initialize anomaly detector models, train using first batch
     models = init_detector_models(sensors, batches[0], detector)
+
+    first_pass = True
+
+    for batch in batches:
+        for sensor in sensors: # Apply the scores
+            batch['SCORE_{}'.format(sensor)] = models[sensor].score_anomaly(batch[sensor])
+            batch['FLAG_{}'.format(sensor)] = models[sensor].flag_anomaly(batch[sensor])
+
+        end_time = np.min(batch[timefield])
+        recreate_index = first_pass
 
     
 
@@ -104,7 +127,8 @@ def main():
         dataframe = pd.read_csv(args.input, sep=',')
         print('Loaded into dataframe.\n')
         
-        restream_dataframe(dataframe, detector=detector, 
+        restream_dataframe(dataframe, detector=detector,
+            sensors=args.sensors, timefield=args.timefield, 
             speed=int(float(args.speed)),
             es_uri=args.es and args.es_uri, kibana_uri=args.kibana_uri, 
             index_name=index_name, entry_type=args.entry_type, bokeh_port=int(args.bokeh_port),

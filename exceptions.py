@@ -45,3 +45,7 @@ class SensorsNotFoundError(UdataError):
     msg = "Selected sensors not found in data"
     code = 4
 
+class TimefieldNotFoundError(UdataError):
+    msg = "Selected timefield not found in data"
+    code = 5
+

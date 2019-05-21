@@ -54,10 +54,11 @@ class Gaussian1D(BaseEstimator, AnomalyMixin):
         self.std_ = 1
 
     def fit(self, x):
+        print (x)
         x = pd.Series(x)
-        # self.__setattr__('mu_', np.mean(x))
-        # self.__setattr__('std_', np.std(x, ddof=1))
-        # self.__setattr__('ess_', len(x))
+        self.__setattr__('mu_', np.mean(x))
+        self.__setattr__('std_', np.std(x, ddof=1))
+        self.__setattr__('ess_', len(x))
 
     def update(self, x):  # allows mini-batch
        pass
