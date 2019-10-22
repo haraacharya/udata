@@ -29,7 +29,7 @@ from helpers import load_detector, init_detector_models, select_sensors, normali
 from exceptions import UdataError
 
 
-MAX_BATCH_SIZE = 10
+MAX_BATCH_SIZE = 2
 
 # sys.path.append("/home/cssdesk/Desktop/Udata/")
 
@@ -52,8 +52,7 @@ def restream_dataframe(
     
     print ("printing dataframe after normalize_timefield")
     print (dataframe)
-    sys.exit()
-
+    
     dataframe, sensors = select_sensors(
         dataframe, sensors, available_sensors, timefield
     )
@@ -79,6 +78,8 @@ def restream_dataframe(
     )
     restream_thread.start()
 
+    
+
 def threaded_restream_dataframe(dataframe, sensors, detector, timefield,
                                 es_conn, index_name, entry_type, bokeh_port,
                                 update_queue, interval=3, sleep_interval=1):
@@ -86,11 +87,11 @@ def threaded_restream_dataframe(dataframe, sensors, detector, timefield,
     print ("Inside threaded_restream_dataframe")
 
     # Split data into batches
-    print ("printing default dataframe inside  threaded_restream_dataframe")
-    print (dataframe)
+    # print ("printing default dataframe inside  threaded_restream_dataframe")
+    # print (dataframe)
     batches = np.array_split(dataframe, math.ceil(dataframe.shape[0]/MAX_BATCH_SIZE))
-    print ("*******************printing batch**********************")
-    print (batches[0])
+    # print ("*******************printing batch**********************")
+    # print (batches[0])
     # Initialize anomaly detector models, train using first batch
     models = init_detector_models(sensors, batches[0], detector)
 
@@ -103,6 +104,20 @@ def threaded_restream_dataframe(dataframe, sensors, detector, timefield,
 
         end_time = np.min(batch[timefield])
         recreate_index = first_pass
+        
+        while end_time < np.max(batch[timefield]):
+            start_time = end_time
+            end_time = end_time + (interval*1000)
+            if not recreate_index:
+                while np.round(time.time()) < end_time/1000.:
+                    sys.stdout.write('.')
+                    sys.stdout.flush()
+                    time.sleep(sleep_interval)
+            ind = np.logical_and(batch[timefield] <= end_time, batch[timefield] > start_time)
+            print('\nWriting {} rows dates {} to {}'
+                .format(np.sum(ind), datetime.datetime.fromtimestamp(start_time/1000),
+                datetime.datetime.fromtimestamp(end_time/1000))) 
+
 
     
 
@@ -135,6 +150,7 @@ def main():
             cols=int(args.cols)
         )
 
+       
 
     except UdataError as exc:
         print(repr(exc))
@@ -145,4 +161,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+    print ("COMPLETED THE WHOLE TASK")
     

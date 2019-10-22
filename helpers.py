@@ -13,7 +13,7 @@ from anomaly_detectors import AnomalyMixin
 """ Parse commandline arguments """
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--detector", help="anomaly detector or ML model to use", default="Gaussian1D or Gaussian mixture models")
+    parser.add_argument("--detector", help="anomaly detector or ML model to use", default="Gaussian1D")
     parser.add_argument("--modules", help="Python modules that define additional anomaly " "detectors",
                         nargs='+', default=[])
 
@@ -35,7 +35,7 @@ def parse_arguments():
                         default="1.0")
     parser.add_argument("--cols", help="Dashboard columns",
                         default="3")
-    parser.add_argument('input', help='input file or stream')
+    parser.add_argument('--input', help='input file or stream')
     return parser.parse_args()
 
 
@@ -66,8 +66,8 @@ def init_detector_models(sensors, training_set, detector):
     """ Initialize anomaly detector models """
     models = {}
     for sensor in sensors:
-        print ("#########################")
-        print (sensor)
+        # print ("#########################")
+        # print (sensor)
         models[sensor] = detector()
         models[sensor].fit(training_set[sensor])
     return models

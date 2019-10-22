@@ -1,0 +1,9 @@
+bokeh
+dateparser
+elasticsearch
+numpy
+scipy
+pandas
+kibana-dashboard-api
+scikit-learn
+tornado==4.5.3
