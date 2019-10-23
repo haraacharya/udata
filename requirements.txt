@@ -1,9 +1,6 @@
-bokeh
-dateparser
-elasticsearch
-numpy
-scipy
-pandas
-kibana-dashboard-api
-scikit-learn
-tornado==4.5.3
+#pip install -r requirements.txt
+dateparser==0.7.2
+numpy==1.16.2
+pandas==0.24.2
+scipy==1.2.1
+scikit_learn==0.21.3
