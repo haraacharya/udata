@@ -4,7 +4,8 @@ import numpy as np
 
 from update_formulae import (
     rolling_window_update,
-    decision_rule
+    decision_rule, update_correct_sample_size, convex_combination
+
 )
 
 from scipy.stats import norm
@@ -60,13 +61,22 @@ class Gaussian1D(BaseEstimator, AnomalyMixin):
         self.__setattr__('std_', np.std(x, ddof=1))
         self.__setattr__('ess_', len(x))
 
-    def update(self, x):  # allows mini-batch
-       pass
+    def update(self, x):  # mini-batch
+        try:
+            getattr(self, "mu_")
+        except AttributeError:
+            raise RuntimeError("First fit the detector before updating it")
+        x = pd.series(x)
+        ess, weight = update_correct_sample_size(effective_sample_size=self.ess_, batch_size=len(x), forgetting_factor=self.ff)
+        self.__setattr__('ess', ess)
+        self.__setattr__('mu_', convex_combination(self.mu_, np.mean(x), weight=weight))
+        self.__setattr__('std_', np.std(x)) 
     
     def score_anomaly(self, x):
         x = pd.Series(x)
         scaled_x = np.abs(x - self.mu_)/(1.0*self.std_)
         return norm.cdf(scaled_x)
+
     def flag_anomaly(self, x):
         return decision_rule(self.score_anomaly(x), self.threshold)
 

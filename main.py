@@ -20,7 +20,7 @@ import pandas as pd
 import numpy as np
 
 from restream.elasticsearch import init_elasticsearch
-
+from dashboard.bokeh import generate_dashboard as generate_bokeh_dashboard
 
 
 from helpers import parse_arguments
@@ -29,7 +29,7 @@ from helpers import load_detector, init_detector_models, select_sensors, normali
 from exceptions import UdataError
 
 
-MAX_BATCH_SIZE = 2
+MAX_BATCH_SIZE = 50
 
 # sys.path.append("/home/cssdesk/Desktop/Udata/")
 
@@ -70,6 +70,11 @@ def restream_dataframe(
     # Queue to communicate between restreamer and dashboard threads
     update_queue = Queue()
     print("generate a bokeh dashboard!")
+
+    if bokeh_port:
+        generate_bokeh_dashboard(
+            sensors, title=detector.__name__, cols=cols,
+            port=bokeh_port, update_queue = update_queue)
 
     restream_thread = threading.Thread(
         target=threaded_restream_dataframe,
@@ -118,7 +123,14 @@ def threaded_restream_dataframe(dataframe, sensors, detector, timefield,
                 .format(np.sum(ind), datetime.datetime.fromtimestamp(start_time/1000),
                 datetime.datetime.fromtimestamp(end_time/1000))) 
 
+            if bokeh_port:
+                update_queue.put(batch.loc[ind])
 
+            if es_conn:
+                pass
+            recreate_index = False
+
+        
     
 
 # Main function

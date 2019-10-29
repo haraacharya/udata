@@ -38,3 +38,20 @@ def decision_rule(score, threshhold=0.99, two_sided=True):
 
 def rolling_window_update():
     pass
+
+
+def convex_combination(a, b, weight):
+   
+    return (1-weight) * a + weight * b
+
+
+def update_correct_sample_size(effective_sample_size, batch_size, forgetting_factor ):
+ 
+    updated_sample_size = (
+        effective_sample_size * forgetting_factor + batch_size
+    )
+    weight = 1 - (
+        (effective_sample_size*1.0 - batch_size) /
+        (effective_sample_size*1.0)
+    )
+    return updated_sample_size, weight

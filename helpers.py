@@ -106,7 +106,6 @@ def detect_time(dataframe):
 def normalize_timefield(dataframe, timefield, speed=5):
     print ("===========================", timefield)
     available_sensor_names = set(dataframe.columns)
-    
     # Get timefield from args
     if timefield and timefield not in available_sensor_names:
         raise TimefieldNotFoundError(timefield)
@@ -131,9 +130,6 @@ def normalize_timefield(dataframe, timefield, speed=5):
             print ("*********Will remove timefield******")
             available_sensor_names.remove(timefield)
         
-        min_time = dataframe[timefield][0]
-        max_time = dataframe[timefield][dataframe[timefield].size-1]
-
         if not unix:
                 dataframe['time'] = pd.to_datetime(
                     dataframe[timefield],
@@ -142,10 +138,11 @@ def normalize_timefield(dataframe, timefield, speed=5):
                 timefield = 'time'
                 unix = True
 
+        min_time = dataframe[timefield][0]
+        max_time = dataframe[timefield][dataframe[timefield].size-1]
         print('data found from {} to {}'\
                 .format(dateparser.parse(str(min_time)),
                         dateparser.parse(str(max_time))))
-
         if unix:
             print('Converting to milliseconds ...')
             dataframe[timefield] = np.floor(dataframe[timefield]*1000).astype('int')
